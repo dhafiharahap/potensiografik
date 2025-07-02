@@ -1,67 +1,103 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grafik Realtime</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitoring Realtime Potensio & DHT</title>
+
+  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <!-- CSS Modern & Responsif -->
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       padding: 16px;
       font-family: 'Segoe UI', sans-serif;
-      background-color: #f9f9f9;
+      background: #f5f7fa;
+      color: #222;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 22px;
       color: #333;
     }
 
-    h2 {
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      margin-top: 0;
       font-size: 18px;
-      margin-top: 24px;
-      margin-bottom: 12px;
+      color: #444;
+      margin-bottom: 16px;
       text-align: center;
     }
 
     canvas {
       width: 100% !important;
-      max-width: 100%;
       height: auto !important;
-      aspect-ratio: 16 / 9;
-      background-color: #fff;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      margin-bottom: 24px;
+      aspect-ratio: 16/9;
+    }
+
+    @media (min-width: 600px) {
+      body {
+        padding: 24px 48px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <h2>Grafik Potensio</h2>
-  <canvas id="chartPotensio"></canvas>
+  <h1>📊 Realtime Monitoring Potensio & DHT</h1>
 
-  <h2>Grafik Suhu & Kelembapan</h2>
-  <canvas id="chartDHT"></canvas>
+  <div class="card">
+    <h2>Grafik Potensio</h2>
+    <canvas id="chartPotensio"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>Grafik Suhu & Kelembapan</h2>
+    <canvas id="chartDHT"></canvas>
+  </div>
 
   <script>
-    // Firebase Config
+    // 1. Firebase Config
     const firebaseConfig = {
       databaseURL: "https://dhafi-1911c-default-rtdb.firebaseio.com/"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Chart Potensio
+    // 2. Chart Potensio
     const ctxPot = document.getElementById('chartPotensio').getContext('2d');
     const chartPot = new Chart(ctxPot, {
       type: 'line',
       data: {
         labels: [],
         datasets: [{
-          label: 'Potensio',
+          label: 'Nilai Potensio',
           data: [],
+          backgroundColor: 'rgba(0,128,0,0.1)',
           borderColor: 'green',
           borderWidth: 2,
-          tension: 0.3
+          tension: 0.3,
+          fill: true
         }]
       },
       options: {
@@ -69,24 +105,39 @@
         animation: false,
         scales: {
           x: {
-            title: { display: false }
+            title: {
+              display: true,
+              text: 'Waktu (detik)',
+              color: '#555'
+            },
+            ticks: {
+              color: '#555'
+            }
           },
           y: {
             beginAtZero: true,
-            title: { display: false }
+            title: {
+              display: true,
+              text: 'Nilai ADC',
+              color: '#555'
+            },
+            ticks: {
+              color: '#555'
+            }
           }
         },
         plugins: {
           legend: {
             labels: {
-              font: { size: 12 }
+              color: '#333',
+              font: { size: 14 }
             }
           }
         }
       }
     });
 
-    // Chart DHT
+    // 3. Chart DHT
     const ctxDHT = document.getElementById('chartDHT').getContext('2d');
     const chartDHT = new Chart(ctxDHT, {
       type: 'line',
@@ -96,16 +147,20 @@
           {
             label: 'Suhu (°C)',
             data: [],
+            backgroundColor: 'rgba(255,0,0,0.1)',
             borderColor: 'red',
             borderWidth: 2,
-            tension: 0.3
+            tension: 0.3,
+            fill: true
           },
           {
             label: 'Kelembapan (%)',
             data: [],
+            backgroundColor: 'rgba(0,0,255,0.1)',
             borderColor: 'blue',
             borderWidth: 2,
-            tension: 0.3
+            tension: 0.3,
+            fill: true
           }
         ]
       },
@@ -114,36 +169,51 @@
         animation: false,
         scales: {
           x: {
-            title: { display: false }
+            title: {
+              display: true,
+              text: 'Waktu (detik)',
+              color: '#555'
+            },
+            ticks: {
+              color: '#555'
+            }
           },
           y: {
             beginAtZero: true,
-            title: { display: false }
+            title: {
+              display: true,
+              text: 'Nilai',
+              color: '#555'
+            },
+            ticks: {
+              color: '#555'
+            }
           }
         },
         plugins: {
           legend: {
             labels: {
-              font: { size: 12 }
+              color: '#333',
+              font: { size: 14 }
             }
           }
         }
       }
     });
 
-    // Fungsi pembaruan grafik
+    // 4. Logic sliding window
     let counter = 0;
     function updateChart(chart, label, dataArray, value) {
       chart.data.labels.push(label);
       dataArray.push(value);
-      if (chart.data.labels.length > 8) {
+      if (chart.data.labels.length > 10) {
         chart.data.labels.shift();
         dataArray.shift();
       }
       chart.update();
     }
 
-    // Ambil data setiap 5 detik
+    // 5. Ambil data setiap 5 detik dari Firebase
     setInterval(() => {
       const timestamp = counter * 5 + "s";
       counter++;
@@ -152,3 +222,17 @@
         const nilai = snap.val();
         updateChart(chartPot, timestamp, chartPot.data.datasets[0].data, nilai);
       });
+
+      db.ref("DHT/latest/suhu").get().then((snap) => {
+        const suhu = snap.val();
+        updateChart(chartDHT, timestamp, chartDHT.data.datasets[0].data, suhu);
+      });
+
+      db.ref("DHT/latest/kelembapan").get().then((snap) => {
+        const kelembapan = snap.val();
+        updateChart(chartDHT, timestamp, chartDHT.data.datasets[1].data, kelembapan);
+      });
+    }, 5000);
+  </script>
+</body>
+</html>
