@@ -1,53 +1,63 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Realtime Potensio & DHT Chart</title>
+  <title>Grafik Realtime</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     body {
       margin: 0;
-      padding: 10px;
-      font-family: sans-serif;
-      background: #f0f0f0;
+      padding: 16px;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
     }
+
+    h2 {
+      font-size: 18px;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
     canvas {
       width: 100% !important;
       max-width: 100%;
-      height: 300px !important;
-      margin-bottom: 30px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      height: auto !important;
+      aspect-ratio: 16 / 9;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
     }
   </style>
 </head>
 <body>
 
-  <h2>Grafik Nilai Potensio</h2>
+  <h2>Grafik Potensio</h2>
   <canvas id="chartPotensio"></canvas>
 
-  <h2>Grafik Suhu & Kelembapan (DHT22)</h2>
+  <h2>Grafik Suhu & Kelembapan</h2>
   <canvas id="chartDHT"></canvas>
 
   <script>
-    // 1. Firebase Config
+    // Firebase Config
     const firebaseConfig = {
       databaseURL: "https://dhafi-1911c-default-rtdb.firebaseio.com/"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. Inisialisasi Chart Potensio
+    // Chart Potensio
     const ctxPot = document.getElementById('chartPotensio').getContext('2d');
     const chartPot = new Chart(ctxPot, {
       type: 'line',
       data: {
         labels: [],
         datasets: [{
-          label: 'Nilai Potensio',
+          label: 'Potensio',
           data: [],
           borderColor: 'green',
           borderWidth: 2,
@@ -59,17 +69,24 @@
         animation: false,
         scales: {
           x: {
-            title: { display: true, text: 'Detik' }
+            title: { display: false }
           },
           y: {
             beginAtZero: true,
-            title: { display: true, text: 'Nilai ADC' }
+            title: { display: false }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              font: { size: 12 }
+            }
           }
         }
       }
     });
 
-    // 3. Inisialisasi Chart DHT
+    // Chart DHT
     const ctxDHT = document.getElementById('chartDHT').getContext('2d');
     const chartDHT = new Chart(ctxDHT, {
       type: 'line',
@@ -97,55 +114,41 @@
         animation: false,
         scales: {
           x: {
-            title: { display: true, text: 'Detik' }
+            title: { display: false }
           },
           y: {
             beginAtZero: true,
-            title: { display: true, text: 'Nilai' }
+            title: { display: false }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              font: { size: 12 }
+            }
           }
         }
       }
     });
 
-    // 4. Sliding window logic
+    // Fungsi pembaruan grafik
     let counter = 0;
-
     function updateChart(chart, label, dataArray, value) {
       chart.data.labels.push(label);
       dataArray.push(value);
-
       if (chart.data.labels.length > 8) {
         chart.data.labels.shift();
         dataArray.shift();
       }
-
       chart.update();
     }
 
-    // 5. Ambil data dari Firebase setiap 5 detik
+    // Ambil data setiap 5 detik
     setInterval(() => {
       const timestamp = counter * 5 + "s";
       counter++;
 
-      // Potensio
       db.ref("Potensio/latest").get().then((snap) => {
         const nilai = snap.val();
         updateChart(chartPot, timestamp, chartPot.data.datasets[0].data, nilai);
       });
-
-      // DHT Suhu
-      db.ref("DHT/latest/suhu").get().then((snap) => {
-        const suhu = snap.val();
-        updateChart(chartDHT, timestamp, chartDHT.data.datasets[0].data, suhu);
-      });
-
-      // DHT Kelembapan
-      db.ref("DHT/latest/kelembapan").get().then((snap) => {
-        const kelembapan = snap.val();
-        updateChart(chartDHT, timestamp, chartDHT.data.datasets[1].data, kelembapan);
-      });
-
-    }, 5000);
-  </script>
-</body>
-</html>
