@@ -1,240 +1,750 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Sensor Dashboard</title>
+  <title>Sensor Dashboard Mobile</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
+    * {
       margin: 0;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: #333;
+      padding: 0;
+      box-sizing: border-box;
     }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+      overflow-x: hidden;
+    }
+
     .header {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 20px 16px;
       text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+      font-weight: 300;
+    }
+
+    .container {
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
       padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #4CAF50, #2196F3, #FF5722);
+      border-radius: 20px 20px 0 0;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .potensio-icon {
+      background: linear-gradient(135deg, #4CAF50, #45a049);
       color: white;
     }
-    .container {
-      padding: 15px;
-      max-width: 900px;
-      margin: auto;
+
+    .dht-icon {
+      background: linear-gradient(135deg, #FF5722, #E64A19);
+      color: white;
     }
-    .card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+    .servo-icon {
+      background: linear-gradient(135deg, #2196F3, #1976D2);
+      color: white;
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      flex: 1;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #4CAF50;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .status-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
       margin-bottom: 20px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 12px;
     }
-    .card h2 {
-      margin-bottom: 10px;
+
+    .status-item {
+      text-align: center;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 8px;
+      transition: all 0.3s ease;
     }
+
+    .status-item:hover {
+      transform: scale(1.05);
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .status-value {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .status-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+
+    .potensio-value { color: #4CAF50; }
+    .temp-value { color: #FF5722; }
+    .humidity-value { color: #2196F3; }
+    .avg-value { color: #9C27B0; }
+
     .chart-container {
       position: relative;
-      height: 250px;
-    }
-    .status-bar {
-      display: flex;
-      justify-content: space-around;
+      height: 280px;
       margin-top: 10px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 8px;
     }
-    .status-value {
-      font-weight: bold;
-      font-size: 18px;
+
+    .chart-container canvas {
+      border-radius: 8px;
     }
+
     .btn {
-      padding: 12px 20px;
-      background: #4CAF50;
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #2196F3, #1976D2);
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 14px;
       font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+      position: relative;
+      overflow: hidden;
     }
-    .btn:hover {
-      background: #43a047;
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 10px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn.active {
+      background: linear-gradient(135deg, #FF5722, #E64A19);
+      box-shadow: 0 4px 15px rgba(255, 87, 34, 0.3);
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .loading::before {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ddd;
+      border-top: 2px solid #4CAF50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .connection-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+
+    .connection-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+
+    .servo-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 8px;
+    }
+
+    .servo-status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #666;
+      transition: all 0.3s ease;
+    }
+
+    .servo-status-dot.active {
+      background: #4CAF50;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 480px) {
+      .container {
+        padding: 12px;
+      }
+      
+      .card {
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      
+      .chart-container {
+        height: 240px;
+      }
+      
+      .header h1 {
+        font-size: 24px;
+      }
+      
+      .status-value {
+        font-size: 20px;
+      }
+      
+      .btn {
+        padding: 14px;
+        font-size: 15px;
+      }
+    }
+
+    /* Dark theme support */
+    @media (prefers-color-scheme: dark) {
+      .card {
+        background: rgba(30, 30, 30, 0.95);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .card-title {
+        color: #fff;
+      }
+      
+      .status-label {
+        color: #aaa;
+      }
+      
+      .status-item {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      
+      .status-item:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
     }
   </style>
 </head>
 <body>
+  <div class="connection-status">
+    <div class="connection-dot"></div>
+    <span>Connected</span>
+  </div>
+
   <div class="header">
-    <h1>📊 Sensor Dashboard</h1>
-    <p>Realtime Monitoring & Servo Control</p>
+    <h1>📱 Sensor Monitor</h1>
+    <p>Real-time IoT Dashboard</p>
   </div>
 
   <div class="container">
     <!-- Potensio Card -->
     <div class="card">
-      <h2>Potensio</h2>
-      <div class="status-bar">
-        <div>Nilai Saat Ini: <span class="status-value" id="currentPotensio">--</span></div>
-        <div>Rata-rata: <span class="status-value" id="avgPotensio">--</span></div>
+      <div class="card-header">
+        <div class="card-icon potensio-icon">⚡</div>
+        <div class="card-title">Potensio Sensor</div>
+        <div class="status-indicator"></div>
       </div>
+      
+      <div class="status-bar">
+        <div class="status-item">
+          <span class="status-value potensio-value" id="currentPotensio">--</span>
+          <span class="status-label">Current</span>
+        </div>
+        <div class="status-item">
+          <span class="status-value avg-value" id="avgPotensio">--</span>
+          <span class="status-label">Average</span>
+        </div>
+      </div>
+      
       <div class="chart-container">
-        <canvas id="chartPotensio"></canvas>
+        <div class="loading" id="loadingPotensio">Loading sensor data...</div>
+        <canvas id="chartPotensio" style="display: none;"></canvas>
       </div>
     </div>
 
     <!-- DHT Card -->
     <div class="card">
-      <h2>Suhu & Kelembapan</h2>
-      <div class="status-bar">
-        <div>Suhu: <span class="status-value" id="currentTemp">--°C</span></div>
-        <div>Kelembapan: <span class="status-value" id="currentHumidity">--%</span></div>
+      <div class="card-header">
+        <div class="card-icon dht-icon">🌡️</div>
+        <div class="card-title">Temperature & Humidity</div>
+        <div class="status-indicator"></div>
       </div>
+      
+      <div class="status-bar">
+        <div class="status-item">
+          <span class="status-value temp-value" id="currentTemp">--°C</span>
+          <span class="status-label">Temperature</span>
+        </div>
+        <div class="status-item">
+          <span class="status-value humidity-value" id="currentHumidity">--%</span>
+          <span class="status-label">Humidity</span>
+        </div>
+      </div>
+      
       <div class="chart-container">
-        <canvas id="chartDHT"></canvas>
+        <div class="loading" id="loadingDHT">Loading sensor data...</div>
+        <canvas id="chartDHT" style="display: none;"></canvas>
       </div>
     </div>
 
-    <!-- Servo Control -->
+    <!-- Servo Control Card -->
     <div class="card">
-      <h2>Kontrol Servo</h2>
-      <div style="text-align: center;">
-        <button class="btn" id="servoButton">Gerakkan Servo</button>
+      <div class="card-header">
+        <div class="card-icon servo-icon">🔧</div>
+        <div class="card-title">Servo Control</div>
+        <div class="status-indicator"></div>
       </div>
+      
+      <div class="servo-status">
+        <div class="servo-status-dot" id="servoStatusDot"></div>
+        <span id="servoStatusText">Servo: Idle</span>
+      </div>
+      
+      <button class="btn" id="servoButton">🔄 Activate Servo</button>
     </div>
   </div>
 
   <script>
-    // Firebase config
+    // Firebase Configuration
     const firebaseConfig = {
       databaseURL: "https://dhafi-1911c-default-rtdb.firebaseio.com/"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Chart.js setup
+    // Chart.js Global Configuration
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    Chart.defaults.font.size = 12;
+
+    // Initialize Potensio Chart
     const chartPot = new Chart(document.getElementById('chartPotensio').getContext('2d'), {
       type: 'line',
       data: {
         labels: [],
         datasets: [{
-          label: 'Potensio',
+          label: 'Potensio Value',
           data: [],
           borderColor: '#4CAF50',
-          backgroundColor: 'rgba(76, 175, 80, 0.2)',
+          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+          borderWidth: 3,
           tension: 0.4,
-          fill: true
+          fill: true,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          pointBackgroundColor: '#4CAF50',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
         }]
       },
       options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 1000, easing: 'easeInOutQuart' },
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              title: (context) => `Time: ${context[0].label}`,
+              label: (context) => `Value: ${context.parsed.y}`
+            }
+          }
+        },
         scales: {
-          y: { beginAtZero: true }
+          x: {
+            display: true,
+            title: { display: true, text: 'Time', color: '#666', font: { weight: 500 } },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+            ticks: { color: '#666' }
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'ADC Value', color: '#666', font: { weight: 500 } },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+            ticks: { color: '#666' }
+          }
         }
       }
     });
 
+    // Initialize DHT Chart
     const chartDHT = new Chart(document.getElementById('chartDHT').getContext('2d'), {
       type: 'line',
       data: {
         labels: [],
         datasets: [
           {
-            label: 'Suhu (°C)',
+            label: 'Temperature (°C)',
             data: [],
             borderColor: '#FF5722',
-            backgroundColor: 'rgba(255, 87, 34, 0.2)',
+            backgroundColor: 'rgba(255, 87, 34, 0.1)',
+            borderWidth: 3,
             tension: 0.4,
-            fill: true
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            pointBackgroundColor: '#FF5722',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
           },
           {
-            label: 'Kelembapan (%)',
+            label: 'Humidity (%)',
             data: [],
             borderColor: '#2196F3',
-            backgroundColor: 'rgba(33, 150, 243, 0.2)',
+            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+            borderWidth: 3,
             tension: 0.4,
-            fill: true
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            pointBackgroundColor: '#2196F3',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
           }
         ]
       },
       options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 1000, easing: 'easeInOutQuart' },
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 20,
+              color: '#333',
+              font: { weight: 500 }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            cornerRadius: 8
+          }
+        },
         scales: {
-          y: { beginAtZero: true }
+          x: {
+            display: true,
+            title: { display: true, text: 'Time', color: '#666', font: { weight: 500 } },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+            ticks: { color: '#666' }
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Value', color: '#666', font: { weight: 500 } },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+            ticks: { color: '#666' }
+          }
         }
       }
     });
 
-    let potensioData = [];
-    let tempData = [];
-    let humidityData = [];
-    let counter = 0;
+    // Data Management
+    let potensioData = [], tempData = [], humidityData = [], counter = 0;
+    let firstLoad = true;
 
     function updateChart(chart, label, dataArrays, values) {
       chart.data.labels.push(label);
-
+      
       if (Array.isArray(values)) {
         values.forEach((v, i) => {
-          chart.data.datasets[i].data.push(v);
-          dataArrays[i].push(v);
+          if (chart.data.datasets[i]) {
+            chart.data.datasets[i].data.push(v);
+            dataArrays[i].push(v);
+          }
         });
       } else {
         chart.data.datasets[0].data.push(values);
         dataArrays.push(values);
       }
 
+      // Keep only last 8 points for better mobile performance
       if (chart.data.labels.length > 8) {
         chart.data.labels.shift();
         chart.data.datasets.forEach(ds => ds.data.shift());
-        dataArrays.forEach(arr => arr.shift());
+        if (Array.isArray(values)) {
+          dataArrays.forEach(arr => arr.shift());
+        } else {
+          dataArrays.shift();
+        }
       }
 
-      chart.update();
+      chart.update('none');
     }
 
-    function calculateAverage(arr) {
-      if (arr.length === 0) return "--";
-      const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
-      return avg.toFixed(1);
+    function average(arr) {
+      if (!arr.length) return "--";
+      return (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1);
     }
 
-    function updateStatus() {
-      document.getElementById('currentPotensio').textContent = potensioData.at(-1) || "--";
-      document.getElementById('avgPotensio').textContent = calculateAverage(potensioData);
-      document.getElementById('currentTemp').textContent = (tempData.at(-1) || "--") + "°C";
-      document.getElementById('currentHumidity').textContent = (humidityData.at(-1) || "--") + "%";
+    function updateDisplay() {
+      document.getElementById("currentPotensio").textContent = potensioData.at(-1) || "--";
+      document.getElementById("avgPotensio").textContent = average(potensioData);
+      document.getElementById("currentTemp").textContent = (tempData.at(-1) || "--") + "°C";
+      document.getElementById("currentHumidity").textContent = (humidityData.at(-1) || "--") + "%";
     }
 
+    function showChart(chartId, loadingId) {
+      document.getElementById(loadingId).style.display = 'none';
+      document.getElementById(chartId).style.display = 'block';
+    }
+
+    // Data Fetching
     setInterval(() => {
       const label = (counter * 5) + "s";
       counter++;
 
+      // Potensio Data
       db.ref("Potensio/latest").get().then(snap => {
         if (snap.exists()) {
           const val = snap.val();
           updateChart(chartPot, label, [potensioData], val);
-          updateStatus();
+          updateDisplay();
+          if (firstLoad) {
+            showChart('chartPotensio', 'loadingPotensio');
+          }
         }
+      }).catch(() => {
+        document.querySelector('.connection-status .connection-dot').style.background = '#f44336';
+        document.querySelector('.connection-status span').textContent = 'Disconnected';
       });
 
+      // DHT Data
       Promise.all([
         db.ref("DHT/latest/suhu").get(),
         db.ref("DHT/latest/kelembapan").get()
-      ]).then(([suhuSnap, humSnap]) => {
-        if (suhuSnap.exists() && humSnap.exists()) {
-          const suhu = suhuSnap.val();
+      ]).then(([tempSnap, humSnap]) => {
+        if (tempSnap.exists() && humSnap.exists()) {
+          const suhu = tempSnap.val();
           const kelembapan = humSnap.val();
           updateChart(chartDHT, label, [tempData, humidityData], [suhu, kelembapan]);
-          updateStatus();
+          updateDisplay();
+          if (firstLoad) {
+            showChart('chartDHT', 'loadingDHT');
+            firstLoad = false;
+          }
         }
+      }).catch(() => {
+        document.querySelector('.connection-status .connection-dot').style.background = '#f44336';
+        document.querySelector('.connection-status span').textContent = 'Disconnected';
       });
 
     }, 5000);
 
-    // Servo control
+    // Servo Control
     let servoState = false;
-    document.getElementById("servoButton").addEventListener("click", () => {
+    const servoButton = document.getElementById("servoButton");
+    const servoStatusDot = document.getElementById("servoStatusDot");
+    const servoStatusText = document.getElementById("servoStatusText");
+
+    servoButton.addEventListener("click", () => {
       servoState = !servoState;
+      
+      // Update UI immediately for better UX
+      servoButton.disabled = true;
+      servoButton.textContent = "⏳ Processing...";
+      
       db.ref("/Servo/state").set(servoState).then(() => {
-        document.getElementById("servoButton").textContent = servoState ? "Kembalikan Servo" : "Gerakkan Servo";
+        servoButton.disabled = false;
+        servoButton.textContent = servoState ? "🔄 Return Servo" : "🔄 Activate Servo";
+        servoButton.classList.toggle('active', servoState);
+        
+        servoStatusDot.classList.toggle('active', servoState);
+        servoStatusText.textContent = servoState ? "Servo: Active" : "Servo: Idle";
       }).catch(err => {
-        alert("Gagal mengirim ke Firebase: " + err.message);
+        servoButton.disabled = false;
+        servoButton.textContent = servoState ? "🔄 Return Servo" : "🔄 Activate Servo";
+        alert("Failed to control servo: " + err.message);
       });
+    });
+
+    // Connection Status Monitor
+    db.ref('.info/connected').on('value', (snap) => {
+      const connected = snap.val();
+      const dot = document.querySelector('.connection-status .connection-dot');
+      const text = document.querySelector('.connection-status span');
+      
+      if (connected) {
+        dot.style.background = '#4CAF50';
+        text.textContent = 'Connected';
+      } else {
+        dot.style.background = '#f44336';
+        text.textContent = 'Disconnected';
+      }
+    });
+
+    // Initial servo state check
+    db.ref("/Servo/state").get().then((snap) => {
+      if (snap.exists()) {
+        servoState = snap.val();
+        servoButton.textContent = servoState ? "🔄 Return Servo" : "🔄 Activate Servo";
+        servoButton.classList.toggle('active', servoState);
+        servoStatusDot.classList.toggle('active', servoState);
+        servoStatusText.textContent = servoState ? "Servo: Active" : "Servo: Idle";
+      }
     });
   </script>
 </body>
